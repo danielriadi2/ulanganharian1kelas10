@@ -60,6 +60,7 @@
     <div id="quizSection" class="section">
         <div class="header-quiz">
             <span id="qNumber">Soal 1/20</span>
+            <span id="timerDisplay" style="font-weight: bold; color: #e74c3c;">Sisa Waktu: 35:00</span>
         </div>
         <div id="questionContainer" class="question-box"></div>
         <div id="optionsContainer"></div>
@@ -92,8 +93,6 @@
 </form>
 
 <script>
-    // UBAH JUGA URL DI BAWAH INI DENGAN URL GOOGLE SCRIPT ANDA
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbRystPhUeaSCFf_u-GaJNnzTEyEmQU14KcbTB6f8Xb-aVGAXnyzSCi_v69Dt_GN3d/exec";
     var submitted = false;
 
     // DATA SOAL
@@ -125,12 +124,36 @@
     let currentQ = 0;
     let userData = {};
     let skorAkhir = 0;
+    
+    // Variabel Timer
+    let timerInterval;
+    let waktuSisa = 35 * 60; // 35 menit dalam detik
 
     function acakArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [array[i], array[j]] = [array[j], array[i]];
         }
+    }
+
+    function mulaiTimer() {
+        timerInterval = setInterval(function() {
+            waktuSisa--;
+            
+            let menit = Math.floor(waktuSisa / 60);
+            let detik = waktuSisa % 60;
+            
+            menit = menit < 10 ? "0" + menit : menit;
+            detik = detik < 10 ? "0" + detik : detik;
+            
+            document.getElementById('timerDisplay').innerText = `Sisa Waktu: ${menit}:${detik}`;
+            
+            if (waktuSisa <= 0) {
+                clearInterval(timerInterval);
+                alert("Waktu habis! Jawaban Anda akan dikirim secara otomatis.");
+                kirimJawaban(true); 
+            }
+        }, 1000); 
     }
 
     function mulaiUjian() {
@@ -150,6 +173,7 @@
         document.getElementById('loginSection').classList.remove('active');
         document.getElementById('quizSection').classList.add('active');
         tampilSoal();
+        mulaiTimer(); // Jalankan Timer
     }
 
     function tampilSoal() {
@@ -193,12 +217,13 @@
         tampilSoal();
     }
 
-    function kirimJawaban() {
-        if(userAnswers.includes(null)) {
+    function kirimJawaban(isAutoSubmit = false) {
+        if(!isAutoSubmit && userAnswers.includes(null)) {
             let konfirmasi = confirm("Masih ada soal yang belum dijawab. Yakin ingin mengirim?");
             if(!konfirmasi) return;
         }
 
+        clearInterval(timerInterval); // Hentikan timer
         document.getElementById('loadingOverlay').style.display = 'block';
 
         // Hitung Nilai
