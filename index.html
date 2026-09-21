@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ulangan Harian Sejarah</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #2c3e50; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #34495e; }
+        input[type="text"], input[type="email"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        button { background-color: #3498db; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 10px; }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        
+        .section { display: none; }
+        .active { display: block; }
+        
+        .question-box { font-size: 16px; line-height: 1.5; color: #2c3e50; margin-bottom: 20px; }
+        .option { display: block; background: #ecf0f1; margin: 8px 0; padding: 12px; border-radius: 5px; cursor: pointer; transition: 0.2s; border: 2px solid transparent; }
+        .option:hover { background: #d0d3d4; }
+        .option input { margin-right: 10px; transform: scale(1.2); }
+        .selected { border: 2px solid #3498db; background: #e8f4f8; }
+        
+        .nav-buttons { display: flex; justify-content: space-between; margin-top: 20px; gap: 10px; }
+        .nav-buttons button { width: 48%; margin-top: 0; }
+        .header-quiz { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        
+        #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 1000; text-align: center; padding-top: 40vh; font-size: 20px; font-weight: bold; color: #2c3e50; }
+    </style>
+</head>
+<body>
+
+<div id="loadingOverlay">Sedang memproses data... Mohon tunggu.</div>
+
+<div class="container">
+    
+    <!-- BAGIAN 1: FORM LOGIN -->
+    <div id="loginSection" class="section active">
+        <h2>Data Diri Peserta Ujian</h2>
+        <div class="form-group">
+            <label>Nama Lengkap</label>
+            <input type="text" id="siswaNama" placeholder="Masukkan nama lengkap" required>
+        </div>
+        <div class="form-group">
+            <label>Kelas</label>
+            <input type="text" id="siswaKelas" placeholder="Contoh: X IPS 1" required>
+        </div>
+        <div class="form-group">
+            <label>Email (Harap isi dengan benar)</label>
+            <input type="email" id="siswaEmail" placeholder="emailanda@gmail.com" required>
+        </div>
+        <p style="font-size: 12px; color: red;">*Satu email hanya berlaku untuk 1 kali ujian.</p>
+        <button onclick="mulaiUjian()">Mulai Ujian</button>
+    </div>
+
+    <!-- BAGIAN 2: AREA UJIAN -->
+    <div id="quizSection" class="section">
+        <div class="header-quiz">
+            <span id="qNumber">Soal 1/20</span>
+        </div>
+        <div id="questionContainer" class="question-box"></div>
+        <div id="optionsContainer"></div>
+        
+        <div class="nav-buttons">
+            <button id="btnPrev" onclick="navigasi(-1)" style="background-color: #7f8c8d;">Sebelumnya</button>
+            <button id="btnNext" onclick="navigasi(1)">Selanjutnya</button>
+        </div>
+        <button id="btnSubmit" onclick="kirimJawaban()" style="display: none; background-color: #27ae60; margin-top: 15px;">Kirim Jawaban & Selesai</button>
+    </div>
+
+    <!-- BAGIAN 3: HALAMAN SELESAI -->
+    <div id="resultSection" class="section" style="text-align: center;">
+        <h2>Ujian Selesai!</h2>
+        <p>Terima kasih, data dan nilai Anda telah berhasil dikirim ke guru.</p>
+        <h1 style="color: #27ae60; font-size: 40px;" id="displayNilai"></h1>
+    </div>
+
+</div>
+
+<script>
+    // --- MASUKKAN URL WEB APP GOOGLE SCRIPT DI BAWAH INI ---
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwni-rqhM2CDfNo57WjiE0z40kD_BIUJU1bWa49Y8iNkIDvU1_DWlqfhAkobPG3d9LVFQ/exec";
+
+    // Data Soal Lengkap
+    const rawQuestions = [
+        { q: "Secara etimologis, kata sejarah dalam bahasa Indonesia diserap dari bahasa Arab yaitu syajarotun yang memiliki arti...", opts: ["Masa lalu", "Pohon", "Akar", "Waktu", "Tulisan"], ans: 1 },
+        { q: "Menurut Herodotus yang dikenal sebagai Bapak Sejarah Dunia, sejarah tidak berkembang ke arah depan dengan tujuan yang pasti, melainkan...", opts: ["Bergerak melingkar yang tinggi rendahnya diakibatkan oleh keadaan manusia", "Bergerak maju menyesuaikan peradaban teknologi", "Merupakan catatan tentang masa lalu yang tidak dapat diubah", "Adalah ilmu pengetahuan yang disusun atas hasil penyelidikan", "Merupakan kenangan dari tokoh-tokoh besar"], ans: 0 },
+        { q: "Kata sejarah dalam bahasa Inggris adalah history yang berasal dari bahasa Yunani historia. Makna dari kata historia adalah...", opts: ["Cerita masa lalu", "Orang pandai atau ilmu yang diperoleh dari penyelidikan", "Masa prasejarah", "Kumpulan dongeng", "Perjalanan waktu"], ans: 1 },
+        { q: "Mempelajari sejarah dapat memberikan keteladanan dan hikmah dari tokoh-tokoh masa lalu. Hal ini menunjukkan bahwa sejarah memiliki fungsi...", opts: ["Rekreatif", "Inspiratif", "Edukatif", "Instruktif", "Imajinatif"], ans: 2 },
+        { q: "Ketika kita membaca novel berlatar belakang sejarah atau mengunjungi candi, kita merasa terhibur dan seolah dibawa kembali ke masa lalu. Ini merupakan manfaat mempelajari sejarah secara...", opts: ["Edukatif", "Inspiratif", "Instruktif", "Rekreatif", "Subjektif"], ans: 3 },
+        { q: "Selain memberikan pengetahuan, sejarah juga berguna untuk menumbuhkan rasa nasionalisme dan cinta tanah air melalui kisah kepahlawanan. Hal ini sesuai dengan manfaat sejarah, yaitu fungsi...", opts: ["Inspiratif", "Edukatif", "Rekreatif", "Analitis", "Prediktif"], ans: 0 },
+        { q: "Dalam kajian sejarah, terdapat tiga unsur penting. Unsur yang berkedudukan sebagai subjek (pelaku) sekaligus objek peristiwa sejarah adalah...", opts: ["Ruang", "Waktu", "Manusia", "Lingkungan", "Budaya"], ans: 2 },
+        { q: "Konsep ruang dalam sejarah sangat penting karena...", opts: ["Menunjukkan kapan suatu peristiwa terjadi", "Memberikan informasi tentang tempat terjadinya suatu peristiwa sejarah", "Menentukan tokoh-tokoh yang terlibat", "Mengukur lamanya peristiwa tersebut berlangsung", "Memisahkan antara mitos dan fakta sejarah"], ans: 1 },
+        { q: "Pembagian sejarah ke dalam masa praaksara, masa Hindu-Buddha, masa Islam, hingga masa kolonial merupakan penerapan dari konsep...", opts: ["Spasial", "Sinkronik", "Periodisasi (Waktu)", "Kausalitas", "Keberlanjutan"], ans: 2 },
+        { q: "Praktik korupsi, kolusi, dan nepotisme yang masih sering terjadi dari masa lalu hingga saat ini menunjukkan berlakunya konsep...", opts: ["Perubahan", "Pengulangan", "Perkembangan", "Keberlanjutan (Kontinuitas)", "Sinkronik"], ans: 3 },
+        { q: "Revolusi kemerdekaan Indonesia mengubah bentuk pemerintahan dari negara jajahan menjadi negara yang merdeka dan berdaulat. Peristiwa ini merupakan contoh dari konsep...", opts: ["Keberlanjutan", "Perubahan", "Kesinambungan", "Stagnasi", "Kemunduran"], ans: 1 },
+        { q: "Cara berpikir dalam sejarah yang memanjang dalam dimensi waktu tetapi menyempit dalam dimensi ruang disebut...", opts: ["Sinkronik", "Diakronik (Kronologis)", "Anakronik", "Kausalitas", "Heuristik"], ans: 1 },
+        { q: "Jika kita ingin mengkaji kondisi ekonomi dan sosial masyarakat Indonesia secara mendalam hanya pada tahun 1998 (saat krisis moneter), maka pendekatan yang paling tepat digunakan adalah...", opts: ["Diakronik", "Sinkronik", "Kronologis", "Periodisasi", "Anakronisme"], ans: 1 },
+        { q: "Konsep kausalitas dalam ilmu sejarah digunakan untuk menjelaskan tentang...", opts: ["Hubungan sebab-akibat terjadinya suatu peristiwa sejarah", "Keberlanjutan suatu tradisi masyarakat", "Urutan waktu kejadian", "Keaslian suatu dokumen", "Tempat terjadinya peristiwa"], ans: 0 },
+        { q: "Tahap pertama dalam penelitian sejarah di mana peneliti mencari dan mengumpulkan sumber-sumber atau jejak sejarah disebut...", opts: ["Historiografi", "Interpretasi", "Verifikasi", "Heuristik", "Kritik"], ans: 3 },
+        { q: "Setelah sumber sejarah terkumpul, peneliti harus menguji keaslian bahan (dokumen/artefak) dan kredibilitas informasi di dalamnya. Tahap ini disebut...", opts: ["Heuristik", "Historiografi", "Verifikasi (Kritik)", "Interpretasi", "Pemilihan topik"], ans: 2 },
+        { q: "Proses merangkai dan menafsirkan fakta-fakta sejarah yang telah diverifikasi sehingga menjadi sebuah kisah yang masuk akal disebut...", opts: ["Heuristik", "Kritik Ekstern", "Kritik Intern", "Interpretasi", "Historiografi"], ans: 3 },
+        { q: "Tahap terakhir dari sebuah penelitian sejarah berupa penulisan hasil penelitian menjadi sebuah laporan atau karya sejarah disebut...", opts: ["Interpretasi", "Heuristik", "Historiografi", "Verifikasi", "Kausalitas"], ans: 2 },
+        { q: "Salah satu peristiwa sejarah penting di Indonesia adalah Pertempuran Surabaya 10 November 1945. Hikmah paling utama yang dapat diambil peserta didik dari peristiwa tersebut adalah...", opts: ["Mengetahui taktik militer negara asing", "Belajar bagaimana cara menggunakan senjata", "Meneladani semangat rela berkorban, pantang menyerah, dan persatuan demi mempertahankan kemerdekaan", "Mengetahui bahwa diplomasi tidak pernah berhasil", "Merasa bangga tanpa perlu melakukan apa-apa di masa kini"], ans: 2 },
+        { q: "Mempelajari sejarah lokal suatu wilayah secara khusus bertujuan untuk...", opts: ["Membandingkan dengan negara Eropa", "Mencari kelemahan daerah tersebut di masa lalu", "Menghafal seluruh nama pahlawan di dunia", "Mengetahui identitas, asal-usul, dan karakteristik perkembangan masyarakat di daerah tersebut agar timbul rasa memiliki", "Mengubah sejarah yang tidak disukai oleh masyarakat setempat"], ans: 3 }
+    ];
+
+    let questions = [];
+    let userAnswers = new Array(rawQuestions.length).fill(null);
+    let currentQ = 0;
+    let userData = {};
+
+    function tunjukLoading(show) {
+        document.getElementById('loadingOverlay').style.display = show ? 'block' : 'none';
+    }
+
+    function acakArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    function mulaiUjian() {
+        userData.nama = document.getElementById('siswaNama').value.trim();
+        userData.kelas = document.getElementById('siswaKelas').value.trim();
+        userData.email = document.getElementById('siswaEmail').value.trim();
+
+        if(!userData.nama || !userData.kelas || !userData.email) {
+            alert("Harap isi semua data dengan lengkap!");
+            return;
+        }
+
+        tunjukLoading(true);
+
+        // Validasi Email Menggunakan GET (Lolos Exam Browser)
+        const cekUrl = SCRIPT_URL + "?action=checkEmail&email=" + encodeURIComponent(userData.email);
+        
+        fetch(cekUrl)
+            .then(response => response.json())
+            .then(data => {
+                tunjukLoading(false);
+                if (data.status === "exists") {
+                    alert("Maaf, Email ini sudah digunakan untuk mengerjakan ulangan. Anda tidak diizinkan mengulang.");
+                } else {
+                    siapkanSoal();
+                }
+            })
+            .catch(error => {
+                tunjukLoading(false);
+                alert("Terjadi kesalahan jaringan. Coba lagi.");
+            });
+    }
+
+    function siapkanSoal() {
+        // Mengacak soal (menggandakan array asli)
+        questions = [...rawQuestions];
+        acakArray(questions);
+        
+        document.getElementById('loginSection').classList.remove('active');
+        document.getElementById('quizSection').classList.add('active');
+        tampilSoal();
+    }
+
+    function tampilSoal() {
+        document.getElementById('qNumber').innerText = `Soal ${currentQ + 1} / ${questions.length}`;
+        document.getElementById('questionContainer').innerText = questions[currentQ].q;
+        
+        let opsiHtml = "";
+        const labelAbjad = ["A", "B", "C", "D", "E"];
+        
+        questions[currentQ].opts.forEach((opt, index) => {
+            let isChecked = userAnswers[currentQ] === index ? "checked" : "";
+            let isSelectedClass = userAnswers[currentQ] === index ? "selected" : "";
+            
+            opsiHtml += `
+            <label class="option ${isSelectedClass}" onclick="pilihJawaban(${index})">
+                <input type="radio" name="opsi" value="${index}" ${isChecked} style="pointer-events: none;">
+                <b>${labelAbjad[index]}.</b> ${opt}
+            </label>`;
+        });
+        
+        document.getElementById('optionsContainer').innerHTML = opsiHtml;
+
+        // Kontrol Tombol Navigasi
+        document.getElementById('btnPrev').disabled = currentQ === 0;
+        
+        if (currentQ === questions.length - 1) {
+            document.getElementById('btnNext').style.display = 'none';
+            document.getElementById('btnSubmit').style.display = 'block';
+        } else {
+            document.getElementById('btnNext').style.display = 'block';
+            document.getElementById('btnSubmit').style.display = 'none';
+        }
+    }
+
+    function pilihJawaban(idx) {
+        userAnswers[currentQ] = idx;
+        tampilSoal(); // Refresh tampilan untuk menandai pilihan
+    }
+
+    function navigasi(arah) {
+        currentQ += arah;
+        tampilSoal();
+    }
+
+    function kirimJawaban() {
+        // Cek apakah ada yang belum dijawab
+        if(userAnswers.includes(null)) {
+            let konfirmasi = confirm("Masih ada soal yang belum dijawab. Yakin ingin mengirim?");
+            if(!konfirmasi) return;
+        }
+
+        tunjukLoading(true);
+
+        // Hitung Nilai (Benar * 5 karena 20 soal)
+        let skor = 0;
+        for (let i = 0; i < questions.length; i++) {
+            if (userAnswers[i] === questions[i].ans) {
+                skor += 5;
+            }
+        }
+
+        // Susun Parameter GET (Sangat aman untuk Exam Browser)
+        let param = `?action=submitQuiz&nama=${encodeURIComponent(userData.nama)}&kelas=${encodeURIComponent(userData.kelas)}&email=${encodeURIComponent(userData.email)}&nilai=${skor}`;
+        let finalUrl = SCRIPT_URL + param;
+
+        fetch(finalUrl)
+            .then(response => response.json())
+            .then(data => {
+                tunjukLoading(false);
+                if (data.status === "success") {
+                    document.getElementById('quizSection').classList.remove('active');
+                    document.getElementById('resultSection').classList.add('active');
+                    document.getElementById('displayNilai').innerText = `Nilai Anda: ${skor}`;
+                } else {
+                    alert(data.message || "Gagal mengirim data.");
+                }
+            })
+            .catch(error => {
+                tunjukLoading(false);
+                alert("Jaringan bermasalah. Pastikan internet stabil dan coba klik Kirim lagi.");
+            });
+    }
+</script>
+</body>
+</html>
